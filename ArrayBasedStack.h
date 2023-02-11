@@ -2,9 +2,9 @@
 #define STACK_ARRAY
 
 #include <stdexcept>
-
+#include "NVStack.h"
 template<typename T>
-class ArrayBasedStack
+class ArrayBasedStack : public NVStack<T>
 {
 public:
     ArrayBasedStack() : front(-1), capacity(10), data(new T[10]) {}
