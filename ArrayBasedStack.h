@@ -13,7 +13,7 @@ public:
         if (front == capacity - 1)
         {
             //Decide to double when resized (haven't careful calculate)
-            resize(capacity * 2);
+            resize(capacity * 2 + 1);
         }
         data[++front] = element;
     }
@@ -39,8 +39,9 @@ public:
     {
         T *tmp = new T[new_capacity];
         memcpy(tmp, data, sizeof(T) * (front + 1));
-        delete [] data;
+        if (front != -1) delete [] data;
         data = tmp;
+        capacity = new_capacity;
     }
     bool empty()
     {

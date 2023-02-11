@@ -52,6 +52,10 @@ public:
     void reverse();
     void mergeWith(SLinkedList otherList);
     void deleteFromList(SLinkedList deletedIndexes);
+    ~SLinkedList()
+    {
+        clear();
+    }
 };
 
 template<class T>
@@ -245,6 +249,7 @@ void SLinkedList<T>::reverse()
         current = next;
     }
     head = prev;
+    tail->next = nullptr;
 }
 
 template<class T>
