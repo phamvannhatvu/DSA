@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../Library/BinaryTree.h"
+#include "../../Library/BinaryTree.h"
 
 template<class T>
 class MorrisInOrderTree : public BinaryTree<T>
@@ -7,23 +7,25 @@ class MorrisInOrderTree : public BinaryTree<T>
 private:
     void morrisTraverseLast(Node<T> *root)
     {
-        if (root == nullptr) return;
-        if (root->left == nullptr) 
+        Node<T> *p = root;
+        while (p != nullptr)
         {
-            std::cout << root->value << ' ';
-            morrisTraverseLast(root->right);
-        }else
-        {
-            Node<T> *node = root->left;
-            while (node->right != nullptr)
+            if (p->left == nullptr)
             {
-                node = node->right;
+                std::cout << p->value << ' ';
+                p = p->right;
+            }else
+            {
+                Node<T> *tmp = p->left;
+                while (tmp->right != nullptr)
+                {
+                    tmp = tmp->right;
+                }
+                tmp->right = p;
+                tmp = p->left;
+                p->left = nullptr;
+                p = tmp;
             }
-            node->right = root;
-            node = root->left;
-            root->left = nullptr;
-
-            morrisTraverseLast(node);
         }
     }
 public:
