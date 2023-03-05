@@ -1,3 +1,5 @@
+//Pass problem: https://leetcode.com/problems/balance-a-binary-search-tree/description/
+//Solution: https://leetcode.com/problems/balance-a-binary-search-tree/submissions/909725788/
 #ifndef AVL_TREE_H
 #define AVL_TREE_H
 
