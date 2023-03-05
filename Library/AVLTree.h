@@ -3,362 +3,287 @@
 #ifndef AVL_TREE_H
 #define AVL_TREE_H
 
-#include "BinarySearchTree.h"
-
-enum class BanlanceFactor
-{
-    LEFT_HIGHER,
-    RIGHT_HIGHER,
-    EQUAL_HEIGHT
-};
-
 template<class T>
-class AVLTree : public BSTree<T>
+class AVLTree
 {
 public:
-    class BalancedNode : public BSTree<T>::Node
+    class BalancedNode
     {
     public:
-        BanlanceFactor balanceFactor;
-        BalancedNode(const T &value) : BSTree<T>::Node(value), balanceFactor(BanlanceFactor::EQUAL_HEIGHT) {}
+        int height;
+        BalancedNode *parent;
+        BalancedNode *left;
+        BalancedNode *right;
+        T value;
+        BalancedNode(const T &value) : value(value), height(1), parent(nullptr), left(nullptr), right(nullptr) 
+        {
+
+        }
     };
 private:
-    BalancedNode* insert(BalancedNode*, const T&, bool&);
-    BalancedNode* remove(BalancedNode*, const T&, bool&, bool);
-    BalancedNode* leftBalanceOnRemove(BalancedNode*, bool&);
-    BalancedNode* rightBalanceOnRemove(BalancedNode*, bool&);
-    BalancedNode* leftBalance(BalancedNode*, bool&);
-    BalancedNode* rightBalance(BalancedNode*, bool&);
-    BalancedNode* rotateLeft(BalancedNode*);
-    BalancedNode* rotateRight(BalancedNode*);
+    BalancedNode *root;
+    void rotateLeft(BalancedNode*);
+    void rotateRight(BalancedNode*);
     void inOrderTranverse(BalancedNode*);
+    void updateHeight(BalancedNode*);
+    int getBalanceFactor(BalancedNode*);
+    void balanceTree(BalancedNode*);
 public:
-    void insert(const T &item) override;
-    void remove(const T &item) override;
+    void insert(const T &item);
+    void remove(const T &item);
     void inOrderTranverse();
+    AVLTree() : root(nullptr)
+    {
+
+    }
+    ~AVLTree()
+    {
+        while (root != nullptr) remove(root->value);
+    }
 };
 
 template<class T>
 void AVLTree<T>::inOrderTranverse(BalancedNode *root)
 {
     if (root == nullptr) return;
-    inOrderTranverse((BalancedNode*)root->left);
+    inOrderTranverse(root->left);
     std::cout << root->value << "(";
+    std::cout << (root->parent == nullptr ? -1 : root->parent->value) << ',';
     std::cout << (root->left == nullptr ? -1 : root->left->value) << ',';
-    std::cout << (root->right == nullptr ? -1 : root->right->value) << ',';
-    std::cout << (int)root->balanceFactor << ") ";
-    inOrderTranverse((BalancedNode*)root->right);
+    std::cout << (root->right == nullptr ? -1 : root->right->value) << ") ";
+    inOrderTranverse(root->right);
 }
 
 template<class T>
 void AVLTree<T>::inOrderTranverse()
 {
-    inOrderTranverse((BalancedNode*) BSTree<T>::getRoot());
+    inOrderTranverse(root);
 }
 
 template<class T>
 void AVLTree<T>::remove(const T &item) 
 {    
-    bool isShorter = false;
-    BSTree<T>::setRoot(remove((BalancedNode*)BSTree<T>::getRoot(), item, isShorter, false));
+    if (root == nullptr) return;
+    if (root->left == nullptr && root->right == nullptr)
+    {
+        if (root->value == item)
+        {   
+            delete root;
+            root = nullptr;
+        }
+        return;
+    }
+
+    BalancedNode *node = root;
+    BalancedNode *parent = nullptr;
+    while (node != nullptr && node->value != item)
+    {
+        parent = node;
+        if (node->value > item)
+        {
+            node = node->left;
+        }else
+        {
+            node = node->right;
+        }
+    }
+
+    if (node == nullptr) return;
+    
+    BalancedNode *deletedNode = node;
+    if (node->left == nullptr)
+    {
+        if (parent != nullptr)
+        {
+            if (parent->left == node) 
+            {
+                parent->left = node->right;
+            }else
+            {
+                parent->right = node->right;
+            }
+        }else root = node->right;
+        if (node->right != nullptr) node->right->parent = parent;
+    }else if (node->right == nullptr)
+    {
+        if (parent != nullptr)
+        {
+            if (parent->left == node)
+            {
+                parent->left = node->left;
+            }else
+            {
+                parent->right = node->left;
+            }
+        }else root = node->left;
+        node->left->parent = parent;
+    }else
+    {
+        BalancedNode* predecessor = node->left;
+        BalancedNode* predecessorParent = node;
+
+        while (predecessor->right != nullptr)
+        {
+            predecessorParent = predecessor;
+            predecessor = predecessor->right;
+        }
+        
+        node->value = predecessor->value;
+        if (predecessorParent->left == predecessor)
+        {
+            predecessorParent->left = predecessor->left;
+        }else
+        {
+            predecessorParent->right = predecessor->left;
+        }
+        if (predecessor->left != nullptr) predecessor->left->parent = predecessorParent;
+        deletedNode = predecessor;
+        parent = predecessorParent;
+    }
+    delete deletedNode;
+    updateHeight(parent);
+    balanceTree(parent);
 }
 
 template<class T>
 void AVLTree<T>::insert(const T &item) 
 {
-    bool isTaller = false;
-    BSTree<T>::setRoot(insert((BalancedNode*)BSTree<T>::getRoot(), item, isTaller));
-}
-
-template<class T>
-typename AVLTree<T>::BalancedNode* AVLTree<T>::remove(BalancedNode* root, const T& item, bool &isShorter, bool founded)
-{
-    if (root == nullptr)
-    {
-        isShorter = false;
-        return nullptr;
-    }else if (item < root->value)
-    {
-        root->left = remove((BalancedNode*)root->left, item, isShorter, founded);
-        if (isShorter)
-        {
-            root = rightBalanceOnRemove(root, isShorter);
-        }
-    }else if (item > root->value || (founded && root->right != nullptr))
-    {
-        root->right = remove((BalancedNode*)root->right, item, isShorter, founded);
-        if (isShorter)
-        {
-            root = leftBalanceOnRemove(root, isShorter);
-        }
-    }else
-    {
-        BalancedNode* deletedNode = root;
-        if (root->right == nullptr)
-        {
-            BalancedNode* newNode = (BalancedNode*)root->left;
-            isShorter = true;
-            delete deletedNode;
-            return newNode;
-        }else if (root->left == nullptr)
-        {
-            BalancedNode* newNode = (BalancedNode*)root->right;
-            isShorter = true;
-            delete deletedNode;
-            return newNode;
-        }else
-        {
-            BalancedNode* predec = (BalancedNode*)root->left;
-            while (predec->right != nullptr) 
-            {
-                predec = (BalancedNode*)predec->right;
-            }
-            
-            root->value = predec->value;
-            root->left = remove((BalancedNode*)root->left, predec->value, isShorter, 1);
-            if (isShorter)
-            {
-                root = rightBalanceOnRemove(root, isShorter);
-            }
-        }
-    }
-    return root;
-}
-
-template<class T>
-typename AVLTree<T>::BalancedNode* AVLTree<T>::leftBalanceOnRemove(BalancedNode* root, bool &isShorter)
-{
-    if (root->balanceFactor == BanlanceFactor::RIGHT_HIGHER)
-    {
-        root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-    }else if (root->balanceFactor == BanlanceFactor::EQUAL_HEIGHT)
-    {
-        root->balanceFactor = BanlanceFactor::LEFT_HIGHER;
-        isShorter = false;
-    }else
-    {
-        BalancedNode* leftTree = (BalancedNode*)root->left;
-        if (leftTree->balanceFactor == BanlanceFactor::RIGHT_HIGHER)
-        {
-            BalancedNode* rightTree = (BalancedNode*)leftTree->right;
-            if (rightTree->balanceFactor == BanlanceFactor::LEFT_HIGHER)
-            {
-                root->balanceFactor = BanlanceFactor::RIGHT_HIGHER;
-                leftTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            }else if (rightTree->balanceFactor == BanlanceFactor::EQUAL_HEIGHT)
-            {
-                root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-                leftTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            }else
-            {
-                root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-                leftTree->balanceFactor = BanlanceFactor::LEFT_HIGHER;
-            }
-            rightTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            root->left = rotateLeft(leftTree);
-            root = rotateRight(root);
-        }else
-        {
-            if (leftTree->balanceFactor == BanlanceFactor::LEFT_HIGHER)
-            {
-                root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-                leftTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            }else 
-            {
-                root->balanceFactor = BanlanceFactor::LEFT_HIGHER;
-                leftTree->balanceFactor = BanlanceFactor::RIGHT_HIGHER;
-                isShorter = false;
-            }
-            root = rotateRight(root);
-        }
-    }
-    return root;
-}
-
-template<class T>
-typename AVLTree<T>::BalancedNode* AVLTree<T>::rightBalanceOnRemove(BalancedNode* root, bool &isShorter)
-{
-    if (root->balanceFactor == BanlanceFactor::LEFT_HIGHER)
-    {
-        root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-    }else if (root->balanceFactor == BanlanceFactor::EQUAL_HEIGHT)
-    {
-        root->balanceFactor = BanlanceFactor::RIGHT_HIGHER;
-        isShorter = false;
-    }else
-    {
-        BalancedNode* rightTree = (BalancedNode*)root->right;
-        if (rightTree->balanceFactor == BanlanceFactor::LEFT_HIGHER)
-        {
-            BalancedNode* leftTree = (BalancedNode*)rightTree->left;
-            if (leftTree->balanceFactor == BanlanceFactor::LEFT_HIGHER)
-            {
-                root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-                rightTree->balanceFactor = BanlanceFactor::RIGHT_HIGHER;
-            }else if (leftTree->balanceFactor == BanlanceFactor::EQUAL_HEIGHT)
-            {
-                root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-                rightTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            }else
-            {
-                root->balanceFactor = BanlanceFactor::LEFT_HIGHER;
-                rightTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            }
-            leftTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            root->right = rotateRight(rightTree);
-            root = rotateLeft(root);
-        }else
-        {
-            if (rightTree->balanceFactor == BanlanceFactor::RIGHT_HIGHER)
-            {
-                root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-                rightTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            }else 
-            {
-                root->balanceFactor = BanlanceFactor::RIGHT_HIGHER;
-                rightTree->balanceFactor = BanlanceFactor::LEFT_HIGHER;
-                isShorter = false;
-            }
-            root = rotateLeft(root);
-        }
-    }
-    return root;
-}
-
-template<class T>
-typename AVLTree<T>::BalancedNode* AVLTree<T>::insert(BalancedNode *root, const T& item, bool& isTaller)
-{
-    if (root == nullptr)
+    if (root == nullptr) 
     {
         root = new BalancedNode(item);
-        isTaller = true;
-    }else
+        return;
+    }
+    BalancedNode* node = root;
+    BalancedNode* parent = nullptr;
+
+    while (node != nullptr) 
     {
-        if (item < root->value)
+        parent = node;
+        if (node->value > item)
         {
-            root->left = insert((BalancedNode*)root->left, item, isTaller);
-            //left subtree is taller
-            if (isTaller)
-            {
-                if (root->balanceFactor == BanlanceFactor::LEFT_HIGHER)
-                {
-                    root = leftBalance(root, isTaller);
-                }else if (root->balanceFactor == BanlanceFactor::RIGHT_HIGHER)
-                {
-                    root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-                    isTaller = false;
-                }else
-                {
-                    root->balanceFactor = BanlanceFactor::LEFT_HIGHER;
-                }
-            }
-        }else
+            node = node->left;
+        }else 
         {
-            root->right = insert((BalancedNode*)root->right, item, isTaller);
-            //right subtree is taller
-            if (isTaller)
-            {
-                if (root->balanceFactor == BanlanceFactor::RIGHT_HIGHER)
-                {
-                    root = rightBalance(root, isTaller);
-                }else if (root->balanceFactor == BanlanceFactor::LEFT_HIGHER)
-                {
-                    root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-                    isTaller = false;
-                }else
-                {
-                    root->balanceFactor = BanlanceFactor::RIGHT_HIGHER;
-                }
-            }
+            node = node->right;
         }
     }
-    return root;
-}
-
-template<class T>
-typename AVLTree<T>::BalancedNode* AVLTree<T>::leftBalance(BalancedNode* root, bool &isTaller)
-{
-    BalancedNode* leftTree = (BalancedNode*)root->left;
-    if (leftTree->balanceFactor == BanlanceFactor::LEFT_HIGHER)
+    
+    if (parent->value > item) 
     {
-        root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-        leftTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-        root = rotateRight(root);
-        isTaller = false;
+        parent->left = new BalancedNode(item);
+        parent->left->parent = parent;
     }else
     {
-        BalancedNode* rightTree = (BalancedNode*)leftTree->right;
-        if (rightTree->balanceFactor == BanlanceFactor::LEFT_HIGHER)
+        parent->right = new BalancedNode(item);
+        parent->right->parent = parent;
+    }
+    updateHeight(parent);
+    balanceTree(parent);
+}
+
+template<class T>
+void AVLTree<T>::balanceTree(BalancedNode *node)
+{
+    while (node != nullptr) 
+    {
+        int balanceFactor = getBalanceFactor(node);
+        //out of balance at right subtree 
+        if (balanceFactor == 2)
         {
-            root->balanceFactor = BanlanceFactor::RIGHT_HIGHER;
-            leftTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-        }else if (rightTree->balanceFactor == BanlanceFactor::EQUAL_HEIGHT)
+            if (getBalanceFactor(node->right) == -1)
+            {
+                rotateRight(node->right);
+                rotateLeft(node);
+            }else
+            {
+                rotateLeft(node);
+            }
+            node = node->parent;
+        }else if (balanceFactor == -2)
         {
-            root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            leftTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
+            if (getBalanceFactor(node->left) == 1)
+            {
+                rotateLeft(node->left);
+                rotateRight(node);
+            }else 
+            {
+                rotateRight(node);
+            }
+            node = node->parent;
+        }
+        updateHeight(node->parent);
+        node = node->parent;
+    }
+
+    while (root->parent != nullptr) root = root->parent;
+}
+
+template<class T>
+void AVLTree<T>::rotateLeft(BalancedNode* root)
+{
+    BalancedNode* rightNode = root->right;
+    
+    root->right = rightNode->left;
+    if (root->right != nullptr) root->right->parent = root;
+
+    rightNode->left = root;
+    rightNode->parent = root->parent;
+    if (root->parent != nullptr)
+    {
+        if (root->parent->left == root)
+        {
+            root->parent->left = rightNode;
         }else
         {
-            root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            leftTree->balanceFactor = BanlanceFactor::LEFT_HIGHER;
+            root->parent->right = rightNode;
         }
-        rightTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-        root->left = rotateLeft(leftTree);
-        root = rotateRight(root);
-        isTaller = false;
-    }   
-    return root;
+    }
+    root->parent = rightNode;
+
+    updateHeight(root);
+    updateHeight(root->parent);
 }
 
 template<class T>
-typename AVLTree<T>::BalancedNode* AVLTree<T>::rightBalance(BalancedNode* root, bool &isTaller)
+void AVLTree<T>::rotateRight(BalancedNode* root)
 {
-    BalancedNode* rightTree = (BalancedNode*)root->right;
-    if (rightTree->balanceFactor == BanlanceFactor::RIGHT_HIGHER)
+    BalancedNode* leftNode = root->left;
+
+    root->left = leftNode->right;
+    if (root->left != nullptr) root->left->parent = root;
+
+    leftNode->right = root;
+    leftNode->parent = root->parent;
+    if (root->parent != nullptr)
     {
-        root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-        rightTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-        root = rotateLeft(root);
-        isTaller = false;
-    }else
-    {
-        BalancedNode* leftTree = (BalancedNode*)rightTree->left;
-        if (leftTree->balanceFactor == BanlanceFactor::LEFT_HIGHER)
+        if (root->parent->left == root)
         {
-            root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            rightTree->balanceFactor = BanlanceFactor::RIGHT_HIGHER;
-        }else if (leftTree->balanceFactor == BanlanceFactor::EQUAL_HEIGHT)
-        {
-            root->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-            rightTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
+            root->parent->left = leftNode;
         }else
         {
-            root->balanceFactor = BanlanceFactor::LEFT_HIGHER;
-            rightTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
+            root->parent->right = leftNode;
         }
-        leftTree->balanceFactor = BanlanceFactor::EQUAL_HEIGHT;
-        root->right = rotateRight(rightTree);
-        root = rotateLeft(root);
-        isTaller = false;
-    }   
-    return root;
+    }
+    root->parent = leftNode;
+
+    updateHeight(root);
+    updateHeight(root->parent);
 }
 
 template<class T>
-typename AVLTree<T>::BalancedNode* AVLTree<T>::rotateLeft(BalancedNode* root)
+void AVLTree<T>::updateHeight(BalancedNode* root)
 {
-    BalancedNode* rightTree = (BalancedNode*)root->right;
-    root->right = rightTree->left;
-    rightTree->left = root;
-    return rightTree;
+    if (root == nullptr) return;
+    root->height = (root->left == nullptr ? 0 : root->left->height) + 1;
+    if (root->height < (root->right == nullptr ? 0 : root->right->height) + 1)
+    {
+        root->height = (root->right == nullptr ? 0 : root->right->height) + 1;
+    }
 }
 
 template<class T>
-typename AVLTree<T>::BalancedNode* AVLTree<T>::rotateRight(BalancedNode* root)
+int AVLTree<T>::getBalanceFactor(BalancedNode* root)
 {
-    BalancedNode* leftTree = (BalancedNode*)root->left;
-    root->left = leftTree->right;
-    leftTree->right = root;
-    return leftTree;
+    return ((root->right == nullptr ? 0 : root->right->height) - (root->left == nullptr ? 0 : root->left->height));
 }
-
 #endif

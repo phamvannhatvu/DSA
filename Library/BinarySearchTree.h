@@ -13,20 +13,10 @@ public:
         T value;
         Node (const T &value) : left(nullptr), right(nullptr), value(value) {}
     };
-public:
+private:
     Node *root = nullptr;
     int count = 0;
     void inOrderTranverse(Node*);
-protected:
-    void setRoot(Node *root)
-    {
-        this->root = root;
-    }
-
-    Node* getRoot()
-    {
-        return root;
-    }
 public:
     virtual void remove(const T&);
     virtual void insert(const T&);
