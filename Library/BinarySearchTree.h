@@ -11,17 +11,27 @@ public:
         Node *left;
         Node *right;
         T value;
-        Node (T value) : left(nullptr), right(nullptr), value(value) {}
+        Node (const T &value) : left(nullptr), right(nullptr), value(value) {}
     };
-private:
+public:
     Node *root = nullptr;
     int count = 0;
     void inOrderTranverse(Node*);
+protected:
+    void setRoot(Node *root)
+    {
+        this->root = root;
+    }
+
+    Node* getRoot()
+    {
+        return root;
+    }
 public:
-    void remove(T);
-    void insert(T);
+    virtual void remove(const T&);
+    virtual void insert(const T&);
     void inOrderTranverse();
-    bool contain(T);
+    bool contain(const T&);
     int getSize();
     bool isEmpty();
     void clear();
@@ -29,7 +39,7 @@ public:
 };
 
 template <class T>
-void BSTree<T>::remove(T value)
+void BSTree<T>::remove(const T &value)
 {
     if (root == nullptr) return;
     if (count == 1 && root->value == value)
@@ -76,7 +86,7 @@ void BSTree<T>::remove(T value)
                     leftChild = leftChild->right;
                 }
                 std::swap(leftChild->value, current->value);
-                if (parent->left = leftChild) parent->left = leftChild->left;
+                if (parent->left == leftChild) parent->left = leftChild->left;
                 else parent->right = leftChild->left;
                 delete leftChild;
             }
@@ -87,7 +97,7 @@ void BSTree<T>::remove(T value)
 }
 
 template<class T>
-void BSTree<T>::insert(T value)
+void BSTree<T>::insert(const T &value)
 {
     if (root == nullptr)
     {
@@ -126,13 +136,13 @@ void BSTree<T>::inOrderTranverse(Node *root)
     if (root == nullptr) return;
     inOrderTranverse(root->left);
     std::cout << root->value << "(";
-    std::cout << (root->left == nullptr ? 0 : root->left->value) << ',';
-    std::cout << (root->right == nullptr ? 0 : root->right->value) << ") ";
+    std::cout << (root->left == nullptr ? -1 : root->left->value) << ',';
+    std::cout << (root->right == nullptr ? -1 : root->right->value) << ") ";
     inOrderTranverse(root->right);
 }
 
 template<class T>
-bool BSTree<T>::contain(T value)
+bool BSTree<T>::contain(const T &value)
 {
     Node *current = root;
     while (current != nullptr)
