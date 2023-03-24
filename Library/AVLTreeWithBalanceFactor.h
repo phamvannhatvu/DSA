@@ -21,7 +21,7 @@ class AVLTree
 {
 public:
     class Node;
-private:
+public:
     Node *root;
 public:
     AVLTree() : root(nullptr) {}
@@ -203,19 +203,25 @@ public:
     {
         if (node->data > value)
         {
-            node->pLeft = remove(node->pLeft, value, isShorter, found);
-            if (isShorter)
-            {
-                bool dummyTaller = false;
-                node = balanceRight(node, dummyTaller, isShorter);
+            if (node->pLeft != nullptr)
+            {                
+                node->pLeft = remove(node->pLeft, value, isShorter, found);
+                if (isShorter)
+                {
+                    bool dummyTaller = false;
+                    node = balanceRight(node, dummyTaller, isShorter);
+                }
             }
         }else if (node->data < value || (node->data == value && found && node->pRight != nullptr))
         {
-            node->pRight = remove(node->pRight, value, isShorter, found);
-            if (isShorter)
+            if (node->pRight != nullptr)
             {
-                bool dummyTaller = false;
-                node = balanceLeft(node, dummyTaller, isShorter);
+                node->pRight = remove(node->pRight, value, isShorter, found);
+                if (isShorter)
+                {
+                    bool dummyTaller = false;
+                    node = balanceLeft(node, dummyTaller, isShorter);
+                }
             }
         }else
         {
